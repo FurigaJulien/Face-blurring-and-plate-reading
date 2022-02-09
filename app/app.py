@@ -9,13 +9,26 @@ import easyocr
 import pandas as pd
 import pytesseract
 
+# Create easyOCR object
 reader = easyocr.Reader(['en'])
 
+# Define session state variable
 if 'plates' not in st.session_state.keys():
     st.session_state['plates'] = set()
 
+# Functions 
+@st.cache
+def convert_df(df:pd.DataFrame):
+    """
+    Convert dataframe to csv file
+    IMPORTANT: Cache the conversion to prevent computation on every rerun
+    """
+    return df.to_csv().encode('utf-8')
 
-def get_cap(value):
+
+def get_cap(value:str)->None:
+    """
+    Create a cv2.VideoCapture object kept in cache to give streamlit the ability to call the release function"""
     if 'capture' in st.session_state.keys():
         st.session_state['capture'].release()
     st.session_state['capture'] = cv2.VideoCapture(value)
@@ -24,7 +37,7 @@ def get_cap(value):
 st.sidebar.image('images/logo.png')
 
 
-
+# Create columns to display parameters buttons
 col1,col2,col3 = st.columns(3)
 with col1:
     nb_of_number_on_plate = st.select_slider("Number of character on plate",[i for i in range(3,10)])
@@ -33,11 +46,12 @@ with col2:
 
 
 
-
-selectbox = st.selectbox("Select an input video:",["Youtube","Camera","Upload a file"])
+# Create a selectbox to get input type for videoCapture
+selectbox = st.selectbox("Select an input video:",["Camera","Youtube","Upload a file"])
 if selectbox == "Youtube":
     st.text(' Test url : https://www.youtube.com/watch?v=oJ1sAD7IoNs')
     input = st.text_input('Inserez une URL Youtube')
+
 if selectbox == 'Upload a file':
     uploaded_file = st.file_uploader("Choose a file")
     if uploaded_file is not None:
@@ -50,7 +64,7 @@ if selectbox == 'Upload a file':
     if len(file_availables_list) >= 1:
         file_selector  = st.selectbox('Choose an already existing file',file_availables_list)
 
-
+# Create columns for start:stop buttons
 col1,col2,col3 = st.columns(3)
 with col1:
     start_button = st.button("Start inference",key='start_button')
@@ -59,15 +73,24 @@ with col2:
 
 
 
-
+# Init placeholders to display video and read plates data
 stframe = st.empty()
-t = st.empty()
+plates_placeholder = st.empty()
 
+# Display data if one plate or more has been detected
 if len(st.session_state['plates'])>0:
-    t.table(pd.DataFrame({'Plates detected':list(st.session_state['plates'])}))
- 
-if start_button:
+    df = pd.DataFrame({'Plates detected':list(st.session_state['plates'])})
+    csv = convert_df(df)
+    plates_placeholder.table(df)
 
+    st.download_button(
+    label="Download data as CSV",
+    data=csv,
+    file_name='data.csv',
+    mime='text/csv',)
+
+# Start inference for choosen stream
+if start_button:
     torch.hub._validate_not_a_forked_repo=lambda a,b,c: True
     model = torch.hub.load('ultralytics/yolov5', 'custom', path='best_nano.pt')
 
@@ -113,7 +136,6 @@ if start_button:
                     
 
                     img = preprocess_frames(frame,y1,y2,x1,x2,plate_color)
-                    cv2.imwrite('plates.png',img)
                     image = cv2.rectangle(image, start, end, color)
                     image = cv2.putText(image, name, (x1,y1+25), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2, cv2.LINE_AA) 
 
@@ -123,7 +145,7 @@ if start_button:
                         for val in predicted_result:
                             plate_read += val[1]
                         print(plate_read)
-                        filter_predicted_result = "".join(plate_read.split()).replace(":", "").replace(' ','')
+                        filter_predicted_result = "".join(plate_read.split()).replace(":", "").replace(' ','').replace('-','')
                         if len(filter_predicted_result)==int(nb_of_number_on_plate):
                             predictions.append(filter_predicted_result)
                             if predictions.count(filter_predicted_result)>5:
@@ -140,7 +162,7 @@ if start_button:
 
 
         stframe.image(image)
-        t.table(pd.DataFrame({'Plates detected':list(st.session_state['plates'])}))
+        plates_placeholder.table(pd.DataFrame({'Plates detected':list(st.session_state['plates'])}))
 
 
         if stop_button:
