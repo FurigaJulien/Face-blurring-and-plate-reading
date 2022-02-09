@@ -3,27 +3,38 @@ import cv2
 from streamlit_webrtc import VideoTransformerBase, webrtc_streamer
 import torch
 import pafy
-import time
+from functions import preprocess_frames
 import os
+import easyocr
 import pandas as pd
 import pytesseract
 
+reader = easyocr.Reader(['en'])
 
+if 'plates' not in st.session_state.keys():
+    st.session_state['plates'] = set()
+
+
+def get_cap(value):
+    if 'capture' in st.session_state.keys():
+        st.session_state['capture'].release()
+    st.session_state['capture'] = cv2.VideoCapture(value)
+
+# Sidebar image
 st.sidebar.image('images/logo.png')
 
 
 
 col1,col2,col3 = st.columns(3)
-
 with col1:
     nb_of_number_on_plate = st.select_slider("Number of character on plate",[i for i in range(3,10)])
 with col2:
     plate_color = st.selectbox("Plate color",['Light','Dark'])
 
 
+
+
 selectbox = st.selectbox("Select an input video:",["Youtube","Camera","Upload a file"])
-
-
 if selectbox == "Youtube":
     st.text(' Test url : https://www.youtube.com/watch?v=oJ1sAD7IoNs')
     input = st.text_input('Inserez une URL Youtube')
@@ -39,21 +50,24 @@ if selectbox == 'Upload a file':
     if len(file_availables_list) >= 1:
         file_selector  = st.selectbox('Choose an already existing file',file_availables_list)
 
-col1,col2,col3 = st.columns(3)
 
+col1,col2,col3 = st.columns(3)
 with col1:
     start_button = st.button("Start inference",key='start_button')
 with col2:
     stop_button = st.button("Stop inference",key='stop_button')
 
 
-@st.cache(allow_output_mutation=True)
-def get_cap(value):
-    return cv2.VideoCapture(value)
 
+
+stframe = st.empty()
+t = st.empty()
+
+if len(st.session_state['plates'])>0:
+    t.table(pd.DataFrame({'Plates detected':list(st.session_state['plates'])}))
+ 
 if start_button:
 
-    predicted_license_plates = set()
     torch.hub._validate_not_a_forked_repo=lambda a,b,c: True
     model = torch.hub.load('ultralytics/yolov5', 'custom', path='best_nano.pt')
 
@@ -68,15 +82,11 @@ if start_button:
     if selectbox == "Upload a file":
         output = "fileDir/" + file_selector
 
-    capture = get_cap(output)
-    stframe = st.empty()
-
+    get_cap(output)
     predictions = []
-    t = st.empty()
-    i=0
-    while capture.isOpened():
-        i+=1
-        ret, frame = capture.read()
+
+    while st.session_state['capture'].isOpened():
+        ret, frame = st.session_state['capture'].read()
         # if frame is read correctly ret is True
         if not ret:
             print("Can't receive frame (stream end?). Exiting ...")
@@ -101,43 +111,42 @@ if start_button:
                 
                 if name =='licence':
                     
-                    sub_licence = image.copy()[y1:y2, x1:x2]
-                    
+
+                    img = preprocess_frames(frame,y1,y2,x1,x2,plate_color)
+                    cv2.imwrite('plates.png',img)
                     image = cv2.rectangle(image, start, end, color)
                     image = cv2.putText(image, name, (x1,y1+25), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2, cv2.LINE_AA) 
-                    sub_licence = cv2.resize(sub_licence, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
-                    gray = cv2.cvtColor(sub_licence, cv2.COLOR_BGR2GRAY)
-                    blur = cv2.GaussianBlur(gray,(3,3),0)
-                    thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-                    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (1,1))
-                    img = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations = 2)
-                    if plate_color == 'Dark':
-                        img = cv2.bitwise_not(img)
-                    predicted_result = pytesseract.image_to_string(img, lang ='eng',config ='--oem 3 --psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
 
-                    
-                    filter_predicted_result = "".join(predicted_result.split()).replace(":", "").replace(' ','')
-                    print(len(filter_predicted_result))
-                    if len(filter_predicted_result)==int(nb_of_number_on_plate):
-                        predictions.append(filter_predicted_result)
-                        if predictions.count(filter_predicted_result)>5:
-                            predicted_license_plates.add(filter_predicted_result)
-                            predictions = []
-                            
+                    predicted_result = reader.readtext(img)
+                    try:
+                        plate_read = ''
+                        for val in predicted_result:
+                            plate_read += val[1]
+                        print(plate_read)
+                        filter_predicted_result = "".join(plate_read.split()).replace(":", "").replace(' ','')
+                        if len(filter_predicted_result)==int(nb_of_number_on_plate):
+                            predictions.append(filter_predicted_result)
+                            if predictions.count(filter_predicted_result)>5:
+                                st.session_state['plates'].add(filter_predicted_result)
+                                predictions = []
+                    except:
+                        pass
 
                 else:
                     sub_face = image[y1:y2, x1:x2]
-                    # apply a gaussian blur on this new recangle image
                     temp = cv2.resize(sub_face, (5, 5), interpolation=cv2.INTER_LINEAR)
                     sub_face = cv2.resize(temp, (x2-x1, y2-y1), interpolation=cv2.INTER_NEAREST)
-                    # merge this blurry rectangle to our final image
                     image[y1:y1+sub_face.shape[0], x1:x1+sub_face.shape[1]] = sub_face
 
+
         stframe.image(image)
-        t.table(pd.DataFrame({'Plates detected':list(predicted_license_plates)}))
+        t.table(pd.DataFrame({'Plates detected':list(st.session_state['plates'])}))
+
 
         if stop_button:
-            capture.clear()
+            if 'capture' in st.session_state.keys():
+                st.session_state['capture'].release()
+
 
 
     
