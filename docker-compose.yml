@@ -1,0 +1,27 @@
+version: '2'
+services:
+
+  postgres:
+    container_name: postgres
+    image: postgres:10.4
+    restart: always
+    env_file:
+      - db.env
+    volumes:
+      - ./Database/db_init.sql:/docker-entrypoint-initdb.d/db_init.sql
+      - ./Database/postgres-data:/var/lib/postgresql/data
+    ports:
+      - 5436:5432
+
+
+  pgadmin:
+    container_name: pgadmin4_container
+    image: dpage/pgadmin4
+    restart: always
+    env_file:
+      - pgadmin.env
+    ports:
+      - "5050:80"
+
+volumes:
+  postgres-data:

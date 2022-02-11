@@ -1,1 +1,3 @@
-fileDir/
+UI/fileDir/.
+UI/.streamlit/secrets.toml
+env/
