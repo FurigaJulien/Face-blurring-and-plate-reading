@@ -21,11 +21,11 @@ postgres_url = f"postgresql://{db_user}:{db_password}@{db_address}:{db_port}/pco
 
 # Create objects
 
-st.session_state['engine'] = create_engine(postgres_url, echo=True)
+engine = create_engine(postgres_url, echo=True)
 st.session_state['reader'] = easyocr.Reader(['en'])
 st.sidebar.image('./images/logo.png')
 
-if check_password(st.session_state['engine']):
+if check_password(engine):
 
 
     # Define session state variable

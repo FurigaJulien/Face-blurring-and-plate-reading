@@ -51,11 +51,7 @@ def check_password(engine):
 
     def password_entered():
         """Checks whether a password entered by the user is correct."""
-        if (
-            st.session_state["username"] in st.secrets["passwords"]
-            and st.session_state["password"]
-            == st.secrets["passwords"][st.session_state["username"]]
-        ):
+        if Users.check_password(engine,st.session_state["username"],st.session_state["password"]):
             st.session_state["password_correct"] = True
             del st.session_state["password"]  # don't store username + password
             del st.session_state["username"]
@@ -88,6 +84,7 @@ def check_password(engine):
                 username_placeholder.empty()
                 password_placeholder.empty()
                 button_placeholder.empty()
+                signin_button_placeholder.empty()
                 return True
         
         if signin_button:
@@ -119,9 +116,9 @@ def check_password(engine):
 
 
         username = username_placeholder.text_input("Username",on_change=None)
-        password_placeholder.text_input("Password", type="password")
-        first_name_placeholder.text_input("Insert your name")
-        family_name_placeholder.text_input("Insert your family name")
+        password = password_placeholder.text_input("Password", type="password")
+        first_name = first_name_placeholder.text_input("Insert your name")
+        family_name = family_name_placeholder.text_input("Insert your family name")
 
         check_button = button_placeholder.button("Create account")
         login_button = login_button_placeholder.button('Return to login')
@@ -129,7 +126,21 @@ def check_password(engine):
 
         if check_button:
 
-            print(Users.get_username_availability(engine,username))
+            if Users.get_username_availability(engine,username):
+                user = Users(username=username,password=password,first_name=first_name,family_name=family_name)
+                Users.insert_user(engine,user)
+                username_placeholder.empty()
+                password_placeholder.empty()
+                first_name_placeholder.empty()
+                family_name_placeholder.empty()
+
+                check_button = button_placeholder.empty()
+                login_button_placeholder.empty()
+                st.session_state['signin'] = False
+                check_password(engine)
+
+            else:
+                st.error("This username already exists, try another !")
 
         if login_button:
             
