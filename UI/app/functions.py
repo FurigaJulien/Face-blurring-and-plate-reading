@@ -43,6 +43,8 @@ def check_password(engine):
     if not 'password_correct' in st.session_state.keys():
         st.session_state["password_correct"] = False
     
+    if st.session_state["password_correct"] == True:
+        return True
 
 
     if not 'signin' in st.session_state.keys():
@@ -51,8 +53,10 @@ def check_password(engine):
 
     def password_entered():
         """Checks whether a password entered by the user is correct."""
-        if Users.check_password(engine,st.session_state["username"],st.session_state["password"]):
+        valid,user_id = Users.check_password(engine,st.session_state["username"],st.session_state["password"])
+        if valid:
             st.session_state["password_correct"] = True
+            st.session_state['user_id'] = user_id
             del st.session_state["password"]  # don't store username + password
             del st.session_state["username"]
 

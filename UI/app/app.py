@@ -1,8 +1,10 @@
+from git import refresh
 import streamlit as st
 import cv2
 from streamlit_webrtc import VideoTransformerBase, webrtc_streamer
 import torch
 import pafy
+from Database import Plates
 from functions import preprocess_frames,check_password,convert_df,get_cap
 import os
 import easyocr
@@ -25,7 +27,21 @@ engine = create_engine(postgres_url, echo=True)
 st.session_state['reader'] = easyocr.Reader(['en'])
 st.sidebar.image('./images/logo.png')
 
+
 if check_password(engine):
+
+    sidebar_table_placeholder = st.sidebar.empty
+    previous_plates = Plates.get_plates_for_user(engine,st.session_state['user_id'])
+    if previous_plates != None:
+        sidebar_table_placeholder.table(pd.DataFrame({'Plates already detected':[plate.plate_number for plate in previous_plates]}))
+        
+    refresh_button = st.sidebar.button("Refresh")
+
+    if refresh_button:
+        previous_plates = Plates.get_plates_for_user(engine,st.session_state['user_id'])
+        if previous_plates != None:
+            sidebar_table_placeholder.table(pd.DataFrame({'Plates already detected':[plate.plate_number for plate in previous_plates]}))
+
 
 
     # Define session state variable
@@ -87,6 +103,13 @@ if check_password(engine):
         data=csv,
         file_name='data.csv',
         mime='text/csv',)
+
+        save_button = st.button("Save plates on database")
+
+        if save_button:
+            for plate_number in list(st.session_state['plates']):
+                Plates.insert_plates(engine,Plates(user_id= st.session_state['user_id'],plate_number = plate_number))
+
 
     # Start inference for choosen stream
     if start_button:
