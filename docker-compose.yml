@@ -6,7 +6,7 @@ services:
     image: postgres:10.4
     restart: always
     env_file:
-      - db.env
+      - env/db.env
     volumes:
       - ./Database/db_init.sql:/docker-entrypoint-initdb.d/db_init.sql
       - ./Database/postgres-data:/var/lib/postgresql/data
@@ -19,7 +19,7 @@ services:
     image: dpage/pgadmin4
     restart: always
     env_file:
-      - pgadmin.env
+      - env/pgadmin.env
     ports:
       - "5050:80"
 

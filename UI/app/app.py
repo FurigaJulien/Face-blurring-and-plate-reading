@@ -1,7 +1,5 @@
-from git import refresh
 import streamlit as st
 import cv2
-from streamlit_webrtc import VideoTransformerBase, webrtc_streamer
 import torch
 import pafy
 from Database import Plates
@@ -34,7 +32,7 @@ if check_password(engine):
     previous_plates = Plates.get_plates_for_user(engine,st.session_state['user_id'])
     if previous_plates != None:
         sidebar_table_placeholder.table(pd.DataFrame({'Plates already detected':[plate.plate_number for plate in previous_plates]}))
-        
+
     refresh_button = st.sidebar.button("Refresh")
 
     if refresh_button:

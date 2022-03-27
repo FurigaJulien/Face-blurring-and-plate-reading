@@ -1,5 +1,4 @@
 from typing import Optional
-from xmlrpc.client import Boolean
 from sqlmodel import Field, SQLModel, Session, select, col
 
 
