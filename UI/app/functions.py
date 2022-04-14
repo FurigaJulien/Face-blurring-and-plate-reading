@@ -5,8 +5,27 @@ import pandas as pd
 from Database import Users
 
 def preprocess_frames(frame:np.ndarray,y1:int,y2:int,x1:int,x2:int,plate_color:str)->np.ndarray:
-    """
-    Functions to preprocess frames for pytesseract
+    """_summary_
+
+    Parameters
+    ----------
+    frame : np.ndarray
+        input image
+    y1 : int
+        position of the top left corner of the plate
+    y2 : int
+        position of the bottom right corner of the plate
+    x1 : int
+        position of the top left corner of the plate
+    x2 : int
+        position of the bottom right corner of the plate
+    plate_color : str
+        plate color
+
+    Returns
+    -------
+    np.ndarray
+        returns the cropped plate
     """
     sub_licence = frame[y1:y2, x1:x2]
     sub_licence = cv2.resize(sub_licence, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
@@ -20,9 +39,17 @@ def preprocess_frames(frame:np.ndarray,y1:int,y2:int,x1:int,x2:int,plate_color:s
 
 @st.cache
 def convert_df(df:pd.DataFrame):
-    """
-    Convert dataframe to csv file
-    IMPORTANT: Cache the conversion to prevent computation on every rerun
+    """converts a dataframe to a numpy array
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        original dataframe
+
+    Returns
+    -------
+    _type_
+        returns csv file
     """
     return df.to_csv().encode('utf-8')
 
@@ -34,10 +61,13 @@ def get_cap(value:str)->None:
         st.session_state['capture'].release()
     st.session_state['capture'] = cv2.VideoCapture(value)
 
-
 def check_password(engine):
     """Returns `True` if the user had a correct password."""
 
+    if "load_state" not in st.session_state:
+        st.session_state.load_state = False
+    else:
+        st.session_state.load_state = False
 
     if not 'password_correct' in st.session_state.keys():
         st.session_state["password_correct"] = False
@@ -64,70 +94,62 @@ def check_password(engine):
 
 
     if not st.session_state['signin']:
-        username_placeholder = st.empty()
-        password_placeholder = st.empty()
-        col1,col2,col3 = st.columns(3)
-        with col1:
-            button_placeholder = st.empty()
-        with col2:
-            signin_button_placeholder = st.empty()
+        with st.form(key='my_form',clear_on_submit=True):
+            username_placeholder = st.text_input("Username", key="username")
+            password_placeholder = st.text_input("Password", type="password", key="password")
+            col1,col2,col3 = st.columns(3)
 
-        username_placeholder.text_input("Username", key="username")
-        password_placeholder.text_input("Password", type="password", key="password")
+            with col1:
+                check_button = st.form_submit_button("Connect")
+            with col2:
+                signin_button = st.form_submit_button("Signin")
 
-        check_button = button_placeholder.button("Connect")
-        signin_button = signin_button_placeholder.button("Signin")
-        
         if check_button:
+
             password_entered()
             if not st.session_state["password_correct"]:
                 st.error("😕 User not known or password incorrect")
                 return False
             else:
-                username_placeholder.empty()
-                password_placeholder.empty()
-                button_placeholder.empty()
-                signin_button_placeholder.empty()
+
                 return True
         
         if signin_button:
             
-            username_placeholder.empty()
-            password_placeholder.empty()
-            button_placeholder.empty()
-            signin_button_placeholder.empty()
             st.session_state["signin"] = True
             check_password(engine)
 
 
     else:
-        col1,col2 = st.columns(2)
+        with st.form(key='my_form_signin'):
+            col1,col2 = st.columns(2)
 
-        with col1:
-            username_placeholder = st.empty()
-            first_name_placeholder = st.empty()
-        
-        with col2:
-            password_placeholder = st.empty()
-            family_name_placeholder = st.empty()
+            with col1:
+                username_placeholder = st.empty()
+                first_name_placeholder = st.empty()
+            
+            with col2:
+                password_placeholder = st.empty()
+                family_name_placeholder = st.empty()
 
-        col1,col2,col3 = st.columns(3)
-        with col1:
-            button_placeholder = st.empty()
-        with col2:
-            login_button_placeholder = st.empty()
-
-
-        username = username_placeholder.text_input("Username",on_change=None)
-        password = password_placeholder.text_input("Password", type="password")
-        first_name = first_name_placeholder.text_input("Insert your name")
-        family_name = family_name_placeholder.text_input("Insert your family name")
-
-        check_button = button_placeholder.button("Create account")
-        login_button = login_button_placeholder.button('Return to login')
+            col1,col2,col3 = st.columns(3)
+            with col1:
+                button_placeholder = st.empty()
+            with col2:
+                login_button_placeholder = st.empty()
 
 
-        if check_button:
+            username = username_placeholder.text_input("Username",on_change=None)
+            password = password_placeholder.text_input("Password", type="password")
+            first_name = first_name_placeholder.text_input("Insert your name")
+            family_name = family_name_placeholder.text_input("Insert your family name")
+
+            check_button = button_placeholder.form_submit_button("Create account")
+            login_button = login_button_placeholder.form_submit_button('Return to login')
+
+
+        if check_button or st.session_state.load_state:
+            st.session_state.load_state = True
 
             if Users.get_username_availability(engine,username):
                 user = Users(username=username,password=password,first_name=first_name,family_name=family_name)
@@ -137,7 +159,7 @@ def check_password(engine):
                 first_name_placeholder.empty()
                 family_name_placeholder.empty()
 
-                check_button = button_placeholder.empty()
+                
                 login_button_placeholder.empty()
                 st.session_state['signin'] = False
                 check_password(engine)
