@@ -28,7 +28,7 @@ services:
       context: ./ui
       dockerfile: Dockerfile
     ports:
-      - "8501:81"
+      - "80:8501"
 
 volumes:
   postgres-data:
