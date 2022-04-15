@@ -10,8 +10,8 @@ services:
     volumes:
       - ./Database/db_init.sql:/docker-entrypoint-initdb.d/db_init.sql
       - ./Database/postgres-data:/var/lib/postgresql/data
-    ports:
-      - 5436:5432
+    expose:
+      - 5432
 
 
   pgadmin:
@@ -22,6 +22,13 @@ services:
       - env/pgadmin.env
     ports:
       - "5050:80"
+
+  interface:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    ports:
+      - "8501:81"
 
 volumes:
   postgres-data:
