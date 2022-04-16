@@ -4,6 +4,7 @@ import torch
 import pafy
 from Database import Plates
 from functions import preprocess_frames,check_password,convert_df,get_cap
+from prometheus_client import start_http_server, Summary
 import os
 import easyocr
 import pandas as pd
@@ -24,7 +25,14 @@ postgres_url = f"postgresql://{db_user}:{db_password}@{db_address}:{db_port}/pco
 engine = create_engine(postgres_url, echo=True)
 st.session_state['reader'] = easyocr.Reader(['en'])
 st.sidebar.image('./images/logo.png')
+try:
+    start_http_server(9000)
+    st.session_state['request_inference'] = Summary('frame_inference_seconds', 'Time spent doing inference')
+    st.session_state['request__ocr_inference'] = Summary('ocr_inference_seconds', 'Time spent doing ocr inference')
 
+
+except:
+    pass
 
 if check_password(engine):
 
@@ -136,7 +144,8 @@ if check_password(engine):
                 print("Can't receive frame (stream end?). Exiting ...")
                 break
             image = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
-            prediction =  model(image).pandas().xyxy[0].values
+            with st.session_state['request_inference'].time():
+                prediction =  model(image).pandas().xyxy[0].values
                 
 
             if prediction is not None:
@@ -159,8 +168,8 @@ if check_password(engine):
                         img = preprocess_frames(frame,y1,y2,x1,x2,plate_color)
                         image = cv2.rectangle(image, start, end, color)
                         image = cv2.putText(image, name, (x1,y1+25), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2, cv2.LINE_AA) 
-
-                        predicted_result = st.session_state['reader'].readtext(img)
+                        with st.session_state['request__ocr_inference'].time():
+                            predicted_result = st.session_state['reader'].readtext(img)
                         try:
                             plate_read = ''
                             for val in predicted_result:

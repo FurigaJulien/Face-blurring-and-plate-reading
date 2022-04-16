@@ -2,21 +2,26 @@ import cv2
 import numpy as np
 import streamlit as st
 import pandas as pd
+from prometheus_client import Summary
+
 from Database import Users
+
+REQUEST_TIME = Summary('frame_processing_seconds', 'Time spent processing request')
 
 def preprocess_frames(frame:np.ndarray,y1:int,y2:int,x1:int,x2:int,plate_color:str)->np.ndarray:
     """
     Functions to preprocess frames for pytesseract
     """
-    sub_licence = frame[y1:y2, x1:x2]
-    sub_licence = cv2.resize(sub_licence, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
-    gray = cv2.cvtColor(sub_licence, cv2.COLOR_BGR2GRAY)
+    with REQUEST_TIME.time():
+        sub_licence = frame[y1:y2, x1:x2]
+        sub_licence = cv2.resize(sub_licence, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
+        gray = cv2.cvtColor(sub_licence, cv2.COLOR_BGR2GRAY)
 
-    if plate_color == 'Dark':
-        invert = 255 - gray
-        return invert
-    else:
-        return gray
+        if plate_color == 'Dark':
+            invert = 255 - gray
+            return invert
+        else:
+            return gray
 
 @st.cache
 def convert_df(df:pd.DataFrame):
