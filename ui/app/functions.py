@@ -3,8 +3,8 @@ import numpy as np
 import streamlit as st
 import pandas as pd
 from prometheus_client import Summary
-
 from Database import Users
+
 
 REQUEST_TIME = Summary('frame_processing_seconds', 'Time spent processing request')
 
