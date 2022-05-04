@@ -1,6 +1,5 @@
 UI/fileDir/.
 UI/.streamlit/secrets.toml
-env/
 dataset/faces_and_plates_dataset
 Database/postgres-data
 grafana_data

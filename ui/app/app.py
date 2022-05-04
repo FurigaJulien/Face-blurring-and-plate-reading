@@ -12,16 +12,18 @@ from dotenv import load_dotenv
 from sqlmodel import create_engine
 import os
 
-load_dotenv("env/streamlit.env")
+load_dotenv("env/db.env")
 db_user = os.getenv('POSTGRES_USER')
 db_password = os.getenv("POSTGRES_PASSWORD")
 db_name = os.getenv("POSTGRES_DB")
 db_address = os.getenv("POSTGRES_ADDRESS")
 db_port = os.getenv("POSTGRES_PORT")
+
+
 postgres_url = f"postgresql://{db_user}:{db_password}@{db_address}:{db_port}/pco"
 
 # Create objects
-
+print(postgres_url)
 engine = create_engine(postgres_url, echo=True)
 st.session_state['reader'] = easyocr.Reader(['en'])
 st.sidebar.image('./images/logo.png')
@@ -198,6 +200,7 @@ if check_password(engine):
             if stop_button:
                 if 'capture' in st.session_state.keys():
                     st.session_state['capture'].release()
+
 
 
 

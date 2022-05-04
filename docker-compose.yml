@@ -28,8 +28,7 @@ services:
     build:
       context: ./ui
       dockerfile: Dockerfile
-    devices:
-      - "/dev/video0:/dev/video0"
+
     ports:
       - "80:8501"
 

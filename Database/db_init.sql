@@ -15,4 +15,12 @@ CREATE TABLE plates (
         FOREIGN KEY (user_id)
             REFERENCES users(id)
 );
-username
+
+CREATE TABLE files (
+    id SERIAL PRIMARY KEY,
+    user_id SERIAL,
+    filanme VARCHAR NOT NULL,
+    CONSTRAINT fk_user
+        FOREIGN KEY (user_id)
+            REFERENCES users(id)
+);
