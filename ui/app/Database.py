@@ -63,15 +63,14 @@ class Users(SQLModel, table=True):
 
         Parameters
         ----------
-        engine : _type_
-            _description_
+        engine : SQLModel.engine
         username : str
-            _description_
+            User name
 
         Returns
         -------
-        _type_
-            _description_
+        Optional[Users]
+            return a user if it exists
         """
         with Session(engine) as session:
             statement = select(Users).where(col(Users.username)==username)
@@ -82,7 +81,7 @@ class Users(SQLModel, table=True):
                 return None
 
     @classmethod
-    def get_username_availability(cls,engine,username):
+    def get_username_availability(cls,engine,username)->bool:
         """Function to check that a username is not already taken in the database
 
         Parameters
@@ -94,8 +93,8 @@ class Users(SQLModel, table=True):
 
         Returns
         -------
-        _type_
-            _description_
+        bool
+            boolean whether the username is available or not
         """
         if cls.get_user(engine,username) == None:
             return True
@@ -107,8 +106,7 @@ class Plates(SQLModel, table=True):
 
     Parameters
     ----------
-    SQLModel : _type_
-        _description_
+    SQLModel : SQLModel
     table : bool, optional
         _description_, by default True
     """
@@ -123,10 +121,9 @@ class Plates(SQLModel, table=True):
 
         Parameters
         ----------
-        engine : _type_
-            _description_
-        user : _type_
-            _description_
+        engine : SQLModel.engine
+        plate : Plate
+            plate object defined by the user
         """
         with Session(engine) as session:
             session.add(plate)
@@ -138,15 +135,14 @@ class Plates(SQLModel, table=True):
 
         Parameters
         ----------
-        engine : _type_
-            _description_
+        engine : SQLModel.engine
         user_id : int
-            _description_
+            user id
 
         Returns
         -------
-        _type_
-            _description_
+        Optional[Plates]
+            all plates detected for a user
         """
         with Session(engine) as session:
             statement = select(Plates).where(col(Plates.user_id)==user_id)
@@ -156,3 +152,57 @@ class Plates(SQLModel, table=True):
                 return results
             else:
                 return None
+
+
+class Files(SQLModel, table=True):
+    """_summary_
+
+    Parameters
+    ----------
+    SQLModel : SQLModel
+    table : bool, optional
+        _description_, by default True
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: str
+    file_name: str
+
+
+    @classmethod
+    def insert_file(cls,engine,file):
+        """Insert file in database
+
+        Parameters
+        ----------
+        engine : SQL Model.engine
+        file : File
+            file object defined by the user
+        """
+        with Session(engine) as session:
+            session.add(file)
+            session.commit()
+
+    @classmethod
+    def get_files_for_user(cls,engine,user_id:int):
+        """Get all files already detected for a user
+
+        Parameters
+        ----------
+        engine : SQLModel.engine
+        user_id : int
+            user id
+
+        Returns
+        -------
+        Optional[Files]
+            return all files detected for a user
+        """
+        with Session(engine) as session:
+            statement = select(Files).where(col(Files.user_id)==user_id)
+            results = session.exec(statement).all()
+            if len(results)>0:
+                return results
+            else:
+                return None
+
